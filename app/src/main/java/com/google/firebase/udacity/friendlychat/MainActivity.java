@@ -42,6 +42,16 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
+    public static final String ANONYMOUS = "anonymous";
+    public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
+
+    private ListView mMessageListView;
+    private MessageAdapter mMessageAdapter;
+    private ProgressBar mProgressBar;
+    private ImageButton mPhotoPickerButton;
+    private EditText mMessageEditText;
+    private Button mSendButton;
+
 
     private String mUsername;
 
@@ -55,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mUsername = ANONYMOUS;
-
+        // Initialize Firebase components
         mFirebaseDatabase = FirebaseDatabase.getInstance();
         mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("messages");
 
@@ -117,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
         mChildEventListener = new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                FriendlyMessage friendlyMessage = DataSnapshot.getValue(FriendlyMessage.class);
+                FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
                 mMessageAdapter.add(friendlyMessage);
             }
             @Override
@@ -134,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        mMessagesDatabaseReference.addChildEventListener(mChildEventListener)
+        mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
     }
 
     @Override
