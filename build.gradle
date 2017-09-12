@@ -21,7 +21,7 @@ allprojects {
     }
 }
 
-/*
+
 repositories {
 
     maven {
@@ -29,7 +29,7 @@ repositories {
         // Alternative URL is 'https://dl.google.com/dl/android/maven2/'
     }
 }
-*/
+
 
 task clean(type: Delete) {
     delete rootProject.buildDir
