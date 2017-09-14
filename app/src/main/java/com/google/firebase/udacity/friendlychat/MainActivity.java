@@ -17,6 +17,7 @@ package com.google.firebase.udacity.friendlychat;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.annotation.NonNull;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
@@ -29,7 +30,12 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
+
+import com.firebase.ui.auth.AuthUI;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -45,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
     public static final String ANONYMOUS = "anonymous";
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
 
+    public static final int RC_SIGN_IN = 1;
+
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
     private ProgressBar mProgressBar;
@@ -52,12 +60,14 @@ public class MainActivity extends AppCompatActivity {
     private EditText mMessageEditText;
     private Button mSendButton;
 
-
     private String mUsername;
 
+    // Firebase instance variables
     private FirebaseDatabase mFirebaseDatabase;
     private DatabaseReference mMessagesDatabaseReference;
     private ChildEventListener mChildEventListener;
+    private FirebaseAuth mFirebaseAuth;
+    private FirebaseAuth.AuthStateListener mAuthStateListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,8 +75,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mUsername = ANONYMOUS;
+
         // Initialize Firebase components
         mFirebaseDatabase = FirebaseDatabase.getInstance();
+        mFirebaseAuth = FirebaseAuth.getInstance();
+
         mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("messages");
 
         // Initialize references to views
@@ -120,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
                 // TODO: Send messages on click
                 FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null);
                 mMessagesDatabaseReference.push().setValue(friendlyMessage);
+
                 // Clear input box
                 mMessageEditText.setText("");
             }
@@ -130,10 +144,37 @@ public class MainActivity extends AppCompatActivity {
                 FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
                 mMessageAdapter.add(friendlyMessage);
             }
+
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+            public void onCancelled(DatabaseError databaseError) {}
+        };
+        mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
+
+        mAuthStateListener = new FirebaseAuth.AuthStateListener() {
             @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+                FirebaseUser user = firebaseAuth.getCurrentUser();
+                if (user != null) {
+                    // User is signed in
+                    Toast.makeText(MainActivity.this, "You're now signed in. Welcome to FriendlyChat.", Toast.LENGTH_SHORT).show();
+                } else {
+                    // User is signed out
+                    startActivityForResult(
+                            AuthUI.getInstance()
+                                    .createSignInIntentBuilder()
+                                    .setIsSmartLockEnabled(false)
+                                    .setProviders(
+                                            AuthUI.EMAIL_PROVIDER,
+                                            AuthUI.GOOGLE_PROVIDER)
+                                    .build(),
+                            RC_SIGN_IN);
+                }
             }
-            @Override
+        };
+    }
+        /*    @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) {
             }
             @Override
@@ -144,7 +185,20 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
+        mMessagesDatabaseReference.addChildEventListener(mChildEventListener); */
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mFirebaseAuth.addAuthStateListener(mAuthStateListener);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mAuthStateListener != null) {
+            mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
+        }
     }
 
     @Override
